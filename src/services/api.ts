@@ -39,6 +39,10 @@ export const tokenStore = {
   },
 };
 
+// ========================================
+// REQUEST INTERCEPTOR
+// ========================================
+
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenStore.getAccess();
@@ -50,6 +54,10 @@ api.interceptors.request.use(
     return config;
   }
 );
+
+// ========================================
+// RESPONSE INTERCEPTOR
+// ========================================
 
 api.interceptors.response.use(
   (response) => response,
@@ -112,17 +120,28 @@ api.interceptors.response.use(
   }
 );
 
+// ========================================
+// UNWRAP PAGINATED RESPONSE
+// ========================================
+
 const unwrap = <T>(
   data: T | { results: T }
 ): T => {
-  return (
+  if (
     data &&
     typeof data === "object" &&
-    "results" in data
-      ? data.results
-      : data
-  ) as T;
+    "results" in data &&
+    Array.isArray((data as any).results)
+  ) {
+    return (data as any).results as T;
+  }
+
+  return data as T;
 };
+
+// ========================================
+// AUTH
+// ========================================
 
 export const authService = {
   login: async (payload: {
@@ -145,16 +164,19 @@ export const authService = {
     password: string;
     first_name?: string;
     last_name?: string;
-  }) =>
-    (
-      await api.post(
-        "/auth/register/",
-        payload
-      )
-    ).data,
+  }) => {
+    const { data } = await api.post(
+      "/auth/register/",
+      payload
+    );
 
-  me: async () =>
-    (await api.get("/auth/me/")).data,
+    return data;
+  },
+
+  me: async () => {
+    const { data } = await api.get("/auth/me/");
+    return data;
+  },
 
   logout: async () => {
     const refresh = tokenStore.getRefresh();
@@ -169,291 +191,365 @@ export const authService = {
     }
   },
 
-  verifyEmail: async (token: string) =>
-    (
-      await api.post(
-        "/auth/verify-email/",
-        { token }
-      )
-    ).data,
+  verifyEmail: async (token: string) => {
+    const { data } = await api.post(
+      "/auth/verify-email/",
+      { token }
+    );
 
-  forgotPassword: async (email: string) =>
-    (
-      await api.post(
-        "/auth/forgot-password/",
-        { email }
-      )
-    ).data,
+    return data;
+  },
+
+  forgotPassword: async (email: string) => {
+    const { data } = await api.post(
+      "/auth/forgot-password/",
+      { email }
+    );
+
+    return data;
+  },
 
   resetPassword: async (
     token: string,
     password: string
-  ) =>
-    (
-      await api.post(
-        "/auth/reset-password/",
-        { token, password }
-      )
-    ).data,
+  ) => {
+    const { data } = await api.post(
+      "/auth/reset-password/",
+      {
+        token,
+        password,
+      }
+    );
+
+    return data;
+  },
 
   updateProfile: async (
     payload: Record<string, unknown>
-  ) =>
-    (
-      await api.patch(
-        "/auth/me/",
-        payload
-      )
-    ).data,
+  ) => {
+    const { data } = await api.patch(
+      "/auth/me/",
+      payload
+    );
+
+    return data;
+  },
 };
+
+// ========================================
+// MOVIES
+// ========================================
 
 export const movieService = {
   getMovies: async (
     params: Record<string, unknown> = {}
-  ) =>
-    unwrap(
-      (
-        await api.get("/movies/", {
-          params: {
-            content_type: "movie",
-            ...params,
-          },
-        })
-      ).data
-    ),
+  ) => {
+    const { data } = await api.get(
+      "/movies/",
+      {
+        params: {
+          content_type: "movie",
+          ...params,
+        },
+      }
+    );
 
-  getMovie: async (id: number) =>
-    (
-      await api.get(`/movies/${id}/`)
-    ).data,
+    return unwrap(data);
+  },
 
-  searchMovies: async (q: string) =>
-    unwrap(
-      (
-        await api.get("/movies/search/", {
-          params: { q },
-        })
-      ).data
-    ),
+  getMovie: async (id: number) => {
+    const { data } = await api.get(
+      `/movies/${id}/`
+    );
 
-  getTrending: async () =>
-    unwrap(
-      (
-        await api.get("/movies/trending/")
-      ).data
-    ),
+    return data;
+  },
+
+  searchMovies: async (q: string) => {
+    const { data } = await api.get(
+      "/movies/search/",
+      {
+        params: { q },
+      }
+    );
+
+    return unwrap(data);
+  },
+
+  getTrending: async () => {
+    const { data } = await api.get(
+      "/movies/trending/"
+    );
+
+    return unwrap(data);
+  },
 };
+
+// ========================================
+// SHOWS
+// ========================================
 
 export const showService = {
-  getShows: async () =>
-    unwrap(
-      (
-        await api.get("/movies/", {
-          params: {
-            content_type: "show",
-          },
-        })
-      ).data
-    ),
+  getShows: async () => {
+    const { data } = await api.get(
+      "/movies/",
+      {
+        params: {
+          content_type: "show",
+        },
+      }
+    );
 
-  getShow: async (id: number) =>
-    (
-      await api.get(`/movies/${id}/`)
-    ).data,
+    return unwrap(data);
+  },
+
+  getShow: async (id: number) => {
+    const { data } = await api.get(
+      `/movies/${id}/`
+    );
+
+    return data;
+  },
 };
+
+// ========================================
+// ANIME
+// ========================================
 
 export const animeService = {
-  getAnime: async () =>
-    unwrap(
-      (
-        await api.get("/movies/", {
-          params: {
-            content_type: "anime",
-          },
-        })
-      ).data
-    ),
+  getAnime: async () => {
+    const { data } = await api.get(
+      "/movies/",
+      {
+        params: {
+          content_type: "anime",
+        },
+      }
+    );
+
+    return unwrap(data);
+  },
 };
+
+// ========================================
+// EPISODES
+// ========================================
 
 export const episodeService = {
-  getEpisodes: async (showId: number) =>
-    unwrap(
-      (
-        await api.get(
-          `/movies/${showId}/episodes/`
-        )
-      ).data
-    ),
+  getEpisodes: async (showId: number) => {
+    const { data } = await api.get(
+      `/movies/${showId}/episodes/`
+    );
+
+    return unwrap(data);
+  },
 };
+
+// ========================================
+// CATALOG
+// ========================================
 
 export const catalogService = {
-  getGenres: async () =>
-    unwrap(
-      (await api.get("/genres/")).data
-    ),
+  getGenres: async () => {
+    const { data } = await api.get("/genres/");
+    return unwrap(data);
+  },
 
-  getPeople: async () =>
-    unwrap(
-      (await api.get("/people/")).data
-    ),
+  getPeople: async () => {
+    const { data } = await api.get("/people/");
+    return unwrap(data);
+  },
 
-  getLive: async () =>
-    unwrap(
-      (await api.get("/live/")).data
-    ),
+  getLive: async () => {
+    const { data } = await api.get("/live/");
+    return unwrap(data);
+  },
 };
+
+// ========================================
+// BLOG
+// ========================================
 
 export const blogService = {
-  getBlogs: async () =>
-    unwrap(
-      (await api.get("/blogs/")).data
-    ),
+  getBlogs: async () => {
+    const { data } = await api.get("/blogs/");
+    return unwrap(data);
+  },
 
-  getBlog: async (slug: string) =>
-    (
-      await api.get(`/blogs/${slug}/`)
-    ).data,
+  getBlog: async (slug: string) => {
+    const { data } = await api.get(
+      `/blogs/${slug}/`
+    );
+
+    return data;
+  },
 };
+
+// ========================================
+// USER
+// ========================================
 
 export const userService = {
   getProfile: authService.me,
 
   updateProfile: authService.updateProfile,
 
-  getMyList: async () =>
-    unwrap(
-      (
-        await api.get("/user/my-list/")
-      ).data
-    ),
+  getMyList: async () => {
+    const { data } = await api.get(
+      "/user/my-list/"
+    );
 
-  addToMyList: async (content: number) =>
-    (
-      await api.post(
-        "/user/my-list/",
-        { content }
-      )
-    ).data,
+    return unwrap(data);
+  },
 
-  removeFromMyList: async (id: number) =>
-    (
-      await api.delete(
-        `/user/my-list/${id}/`
-      )
-    ).data,
+  addToMyList: async (content: number) => {
+    const { data } = await api.post(
+      "/user/my-list/",
+      { content }
+    );
 
-  getHistory: async () =>
-    unwrap(
-      (
-        await api.get("/user/history/")
-      ).data
-    ),
+    return data;
+  },
+
+  removeFromMyList: async (id: number) => {
+    const { data } = await api.delete(
+      `/user/my-list/${id}/`
+    );
+
+    return data;
+  },
+
+  getHistory: async () => {
+    const { data } = await api.get(
+      "/user/history/"
+    );
+
+    return unwrap(data);
+  },
 
   saveHistory: async (payload: {
     content: number;
     episode?: number | null;
     progress_seconds?: number;
     duration_seconds?: number;
-  }) =>
-    (
-      await api.post(
-        "/user/history/",
-        payload
-      )
-    ).data,
+  }) => {
+    const { data } = await api.post(
+      "/user/history/",
+      payload
+    );
 
-  clearHistory: async () =>
-    (
-      await api.delete(
-        "/user/history/clear/"
-      )
-    ).data,
+    return data;
+  },
+
+  clearHistory: async () => {
+    const { data } = await api.delete(
+      "/user/history/clear/"
+    );
+
+    return data;
+  },
 };
 
-export const subscriptionService = {
-  getPlans: async () =>
-    unwrap(
-      (
-        await api.get(
-          "/subscriptions/plans/"
-        )
-      ).data
-    ),
+// ========================================
+// SUBSCRIPTIONS
+// ========================================
 
-  getSubscriptions: async () =>
-    unwrap(
-      (
-        await api.get(
-          "/subscriptions/"
-        )
-      ).data
-    ),
+export const subscriptionService = {
+  getPlans: async () => {
+    const { data } = await api.get(
+      "/subscriptions/plans/"
+    );
+
+    return unwrap(data);
+  },
+
+  getSubscriptions: async () => {
+    const { data } = await api.get(
+      "/subscriptions/"
+    );
+
+    return unwrap(data);
+  },
 
   checkout: async (
     plan_id: number,
     provider = "manual"
-  ) =>
-    (
-      await api.post(
-        "/subscriptions/checkout/",
-        {
-          plan_id,
-          provider,
-        }
-      )
-    ).data,
+  ) => {
+    const { data } = await api.post(
+      "/subscriptions/checkout/",
+      {
+        plan_id,
+        provider,
+      }
+    );
+
+    return data;
+  },
 };
 
+// ========================================
+// REVIEWS
+// ========================================
+
 export const reviewService = {
-  getReviews: async (id: number) =>
-    unwrap(
-      (
-        await api.get(
-          `/content/${id}/reviews/`
-        )
-      ).data
-    ),
+  getReviews: async (id: number) => {
+    const { data } = await api.get(
+      `/content/${id}/reviews/`
+    );
+
+    return unwrap(data);
+  },
 
   createReview: async (
     id: number,
     rating: number,
     body: string
-  ) =>
-    (
-      await api.post(
-        `/content/${id}/reviews/`,
-        {
-          rating,
-          body,
-        }
-      )
-    ).data,
+  ) => {
+    const { data } = await api.post(
+      `/content/${id}/reviews/`,
+      {
+        rating,
+        body,
+      }
+    );
+
+    return data;
+  },
 };
+
+// ========================================
+// NOTIFICATIONS
+// ========================================
 
 export const notificationService = {
-  getNotifications: async () =>
-    unwrap(
-      (
-        await api.get(
-          "/notifications/"
-        )
-      ).data
-    ),
+  getNotifications: async () => {
+    const { data } = await api.get(
+      "/notifications/"
+    );
 
-  markRead: async (id: number) =>
-    (
-      await api.post(
-        `/notifications/${id}/read/`
-      )
-    ).data,
+    return unwrap(data);
+  },
 
-  markAllRead: async () =>
-    (
-      await api.post(
-        "/notifications/read_all/"
-      )
-    ).data,
+  markRead: async (id: number) => {
+    const { data } = await api.post(
+      `/notifications/${id}/read/`
+    );
+
+    return data;
+  },
+
+  markAllRead: async () => {
+    const { data } = await api.post(
+      "/notifications/read_all/"
+    );
+
+    return data;
+  },
 };
+
+// ========================================
+// ANALYTICS
+// ========================================
 
 export const analyticsService = {
   playback: async (payload: {
@@ -461,14 +557,19 @@ export const analyticsService = {
     event: string;
     position_seconds?: number;
     session_id?: string;
-  }) =>
-    (
-      await api.post(
-        "/analytics/playback/",
-        payload
-      )
-    ).data,
+  }) => {
+    const { data } = await api.post(
+      "/analytics/playback/",
+      payload
+    );
+
+    return data;
+  },
 };
+
+// ========================================
+// API ERROR
+// ========================================
 
 export function getApiError(
   error: unknown,
@@ -477,9 +578,7 @@ export function getApiError(
   if (error instanceof AxiosError) {
     const data = error.response?.data as any;
 
-    if (
-      typeof data?.detail === "string"
-    ) {
+    if (typeof data?.detail === "string") {
       return data.detail;
     }
 
